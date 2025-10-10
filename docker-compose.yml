@@ -6,8 +6,8 @@ services:
     image: rabbitmq:3-management
     container_name: rabbitmq
     ports:
-      - "5672:5672"   # cổng dùng cho app giao tiếp
-      - "15672:15672" # giao diện web quản lý RabbitMQ
+      - "5672:5672"   # App giao tiếp
+      - "15672:15672" # Giao diện web quản lý
     networks:
       - micro_network
 
@@ -27,6 +27,13 @@ services:
     build: ./api-gateway
     ports:
       - "3003:3003"
+    environment:
+      - PORT=3003
+      - AUTH_SERVICE_URL=http://auth:3000
+      - PRODUCT_SERVICE_URL=http://product:3001
+      - ORDER_SERVICE_URL=http://order:3002
+      - JWT_SECRET=super_secret_key   # ✅ dùng chung với tất cả service
+      - LOG_LEVEL=debug
     depends_on:
       - auth
       - order
@@ -39,7 +46,7 @@ services:
     build: ./auth
     environment:
       - MONGODB_AUTH_URI=mongodb://mymongodb:27017/authDB
-      - JWT_SECRET=super_secret_auth_key
+      - JWT_SECRET=super_secret_key   # ✅ cùng secret
       - RABBITMQ_URL=amqp://rabbitmq
     depends_on:
       - mymongodb
@@ -55,6 +62,7 @@ services:
     environment:
       - MONGODB_PRODUCT_URI=mongodb://mymongodb:27017/productDB
       - RABBITMQ_URL=amqp://rabbitmq
+      - JWT_SECRET=super_secret_key   # ✅ cùng secret
     depends_on:
       - mymongodb
       - rabbitmq
@@ -69,6 +77,7 @@ services:
     environment:
       - MONGODB_ORDER_URI=mongodb://mymongodb:27017/orderDB
       - RABBITMQ_URL=amqp://rabbitmq
+      - JWT_SECRET=super_secret_key   # ✅ cùng secret
     depends_on:
       - mymongodb
       - rabbitmq
