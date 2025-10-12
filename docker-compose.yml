@@ -1,20 +1,21 @@
 version: "3.8"
 
 services:
-  # 🐇 RabbitMQ service
+  # 🐇 RabbitMQ
   rabbitmq:
     image: rabbitmq:3-management
     container_name: rabbitmq
     ports:
-      - "5672:5672"   # App giao tiếp
-      - "15672:15672" # Giao diện web quản lý
+      - "5672:5672"
+      - "15672:15672"
     networks:
       - micro_network
 
-  # 🍃 MongoDB service
+  # 🍃 MongoDB
   mymongodb:
     image: mongo:7.0
     container_name: mymongodb
+    restart: always
     ports:
       - "27017:27017"
     volumes:
@@ -25,6 +26,7 @@ services:
   # 🚪 API Gateway
   api-gateway:
     build: ./api-gateway
+    container_name: api-gateway
     ports:
       - "3003:3003"
     environment:
@@ -32,7 +34,7 @@ services:
       - AUTH_SERVICE_URL=http://auth:3000
       - PRODUCT_SERVICE_URL=http://product:3001
       - ORDER_SERVICE_URL=http://order:3002
-      - JWT_SECRET=super_secret_key   # ✅ dùng chung với tất cả service
+      - JWT_SECRET=mySuperSecretKey789
       - LOG_LEVEL=debug
     depends_on:
       - auth
@@ -44,9 +46,10 @@ services:
   # 👤 Auth Service
   auth:
     build: ./auth
+    container_name: auth
     environment:
-      - MONGODB_AUTH_URI=mongodb://mymongodb:27017/authDB
-      - JWT_SECRET=super_secret_key   # ✅ cùng secret
+      - MONGODB_AUTH_URI=mongodb://mymongodb:27017/authdb
+      - JWT_SECRET=mySuperSecretKey789
       - RABBITMQ_URL=amqp://rabbitmq
     depends_on:
       - mymongodb
@@ -59,10 +62,11 @@ services:
   # 📦 Product Service
   product:
     build: ./product
+    container_name: product
     environment:
-      - MONGODB_PRODUCT_URI=mongodb://mymongodb:27017/productDB
+      - MONGODB_PRODUCT_URI=mongodb://mymongodb:27017/productdb
       - RABBITMQ_URL=amqp://rabbitmq
-      - JWT_SECRET=super_secret_key   # ✅ cùng secret
+      - JWT_SECRET=mySuperSecretKey789
     depends_on:
       - mymongodb
       - rabbitmq
@@ -74,17 +78,22 @@ services:
   # 🧾 Order Service
   order:
     build: ./order
+    container_name: order
     environment:
-      - MONGODB_ORDER_URI=mongodb://mymongodb:27017/orderDB
+      - MONGODB_ORDER_URI=mongodb://mymongodb:27017/orderdb
       - RABBITMQ_URL=amqp://rabbitmq
-      - JWT_SECRET=super_secret_key   # ✅ cùng secret
+      - JWT_SECRET=mySuperSecretKey789
     depends_on:
+      # Sửa đổi: Đảm bảo RabbitMQ và MongoDB đã khởi động
       - mymongodb
       - rabbitmq
     ports:
       - "3002:3002"
     networks:
       - micro_network
+    # THAY ĐỔI LỚN: Sử dụng 'command' để chờ 10 giây trước khi chạy lệnh khởi động chính.
+    # Đây là giải pháp tạm thời, đáng tin cậy hơn so với setTimeout trong code NodeJS.
+    command: sh -c "sleep 10 && npm start"
 
 volumes:
   mongo_data:

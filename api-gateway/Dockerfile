@@ -1,18 +1,20 @@
-# Base image
-FROM node:18-slim
+# Sử dụng image Node.js 18 làm nền
+FROM node:18-alpine
 
-# Set working directory
+# Thiết lập thư mục làm việc bên trong container
 WORKDIR /app
 
-# Copy package files và cài dependencies
+# Sao chép file package.json và package-lock.json để cài đặt dependencies
 COPY package*.json ./
-RUN npm install --production
 
-# Copy source code
+# Cài đặt các thư viện
+RUN npm install
+
+# Sao chép toàn bộ mã nguồn vào thư mục làm việc
 COPY . .
 
-# Expose port của service
+# Mở cổng mà ứng dụng sử dụng
 EXPOSE 3003
 
-# Lệnh chạy service
+# Lệnh để khởi chạy ứng dụng khi container được tạo
 CMD ["node", "index.js"]
