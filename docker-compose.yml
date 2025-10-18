@@ -100,4 +100,4 @@ volumes:
 
 networks:
   micro_network:
-    driver: bridge
+    driver: bridge  
