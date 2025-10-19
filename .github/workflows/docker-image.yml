@@ -9,7 +9,9 @@ on:
 
 # Định nghĩa các biến môi trường chung
 env:
-  DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+  DOCKER_USERNAME: haidang04
+  DOCKER_PASSWORD: dckr_pat_IEHTSK0bdFCELYfyfzuIbI0TGZH0
+  
   
 jobs:
   build_and_push:
