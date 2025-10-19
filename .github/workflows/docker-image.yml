@@ -9,9 +9,9 @@ on:
 
 # Định nghĩa các biến môi trường chung
 env:
-  DOCKER_USERNAME: haidang04
-  DOCKER_PASSWORD: dckr_pat_IEHTSK0bdFCELYfyfzuIbI0TGZH0
-  
+  # LƯU Ý: Đặt tên đăng nhập trực tiếp (nếu tên này không chứa thông tin nhạy cảm)
+  # Tuy nhiên, cách an toàn nhất là sử dụng Secret cho cả hai.
+  DOCKER_USERNAME: haidang04 
   
 jobs:
   build_and_push:
@@ -22,12 +22,14 @@ jobs:
         uses: actions/checkout@v4
 
       # -----------------------------------------------------
-      # BƯỚC 1: LOG IN VÀO DOCKER HUB (Sử dụng Secrets đã tạo)
+      # BƯỚC 1: LOG IN VÀO DOCKER HUB (Sửa lại cách sử dụng Secret)
       # -----------------------------------------------------
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
+          # Sử dụng biến môi trường DOCKER_USERNAME đã định nghĩa ở trên
           username: ${{ env.DOCKER_USERNAME }}
+          # Sử dụng Secret DOCKER_PASSWORD đã lưu trữ trong GitHub
           password: ${{ secrets.DOCKER_PASSWORD }}
           
       # -----------------------------------------------------
@@ -38,7 +40,6 @@ jobs:
         with:
           context: ./auth 
           push: true
-          # Tags sẽ là: your_username/e-project-auth:latest và your_username/e-project-auth:[commit_sha]
           tags: |
             ${{ env.DOCKER_USERNAME }}/e-project-auth:latest
             ${{ env.DOCKER_USERNAME }}/e-project-auth:${{ github.sha }}
@@ -67,8 +68,9 @@ jobs:
             ${{ env.DOCKER_USERNAME }}/e-project-order:latest
             ${{ env.DOCKER_USERNAME }}/e-project-order:${{ github.sha }}
 
-          
-      # B5: THÊM DỊCH VỤ API GATEWAY MỚI
+      # -----------------------------------------------------
+      # BƯỚC 5: XỬ LÝ DỊCH VỤ API GATEWAY
+      # -----------------------------------------------------
       - name: Build and Push 'API Gateway' Service
         uses: docker/build-push-action@v5
         with:
@@ -77,4 +79,3 @@ jobs:
           tags: |
             ${{ env.DOCKER_USERNAME }}/e-project-gateway:latest
             ${{ env.DOCKER_USERNAME }}/e-project-gateway:${{ github.sha }}
-
