@@ -26,23 +26,24 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         
-      # 3️⃣ Đăng nhập Docker Hub
+     # 3️⃣ Đăng nhập Docker Hub
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
-          registry: docker.io # 🔥 BỔ SUNG: Khai báo rõ ràng đăng nhập vào Docker Hub
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          registry: docker.io
+          username: ${{ secrets.DOCKER_USERNAME }} # 🔥 ĐỔI TÊN SECRET
+          password: ${{ secrets.DOCKER_TOKEN }}    # 🔥 ĐỔI TÊN SECRET
           
       # 4️⃣ Định nghĩa Image Tags
       - name: Define Image Tags for ${{ matrix.service }}
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}
+          # CẬP NHẬT: Đổi tên Secret ở đây để tag ảnh Docker
+          images: ${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }} 
           tags: |
             type=sha,format=long 
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }} 
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
 
       # 5️⃣ Build và Push Docker Image cho từng Service
       - name: Build and Push ${{ matrix.service }} Image
@@ -55,12 +56,12 @@ jobs:
           cache-from: type=gha 
           cache-to: type=gha,mode=max 
 
-      # 6️⃣ Đăng xuất Docker Hub
+     # 6️⃣ Đăng xuất Docker Hub
       - name: Logout from Docker Hub
         if: always()
         uses: docker/login-action@v3
         with:
           logout: true
-          registry: docker.io # 🔥 BỔ SUNG: Khai báo rõ ràng đăng xuất khỏi Docker Hub
-          username: ${{ secrets.DOCKERHUB_USERNAME }} 
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          registry: docker.io
+          username: ${{ secrets.DOCKER_USERNAME }} # 🔥 ĐỔI TÊN SECRET
+          password: ${{ secrets.DOCKER_TOKEN }}    # 🔥 ĐỔI TÊN SECRET
