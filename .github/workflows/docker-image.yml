@@ -1,0 +1,84 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]name: Microservices Docker CI/CD Pipeline
+
+# Kích hoạt khi có push lên branch chính
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # Cho phép chạy thủ công
+
+# Định nghĩa các biến môi trường chung
+env:
+  DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+  
+jobs:
+  build_and_push:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # -----------------------------------------------------
+      # BƯỚC 1: LOG IN VÀO DOCKER HUB (Sử dụng Secrets)
+      # -----------------------------------------------------
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ env.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+          
+      # -----------------------------------------------------
+      # BƯỚC 2: XỬ LÝ DỊCH VỤ AUTH
+      # -----------------------------------------------------
+      - name: Build and Push 'Auth' Service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./auth 
+          push: true
+          # Tags sẽ là: haidang102/e-project-auth:latest và haidang102/e-project-auth:[commit_sha]
+          tags: |
+            ${{ env.DOCKER_USERNAME }}/e-project-auth:latest
+            ${{ env.DOCKER_USERNAME }}/e-project-auth:${{ github.sha }}
+
+      # -----------------------------------------------------
+      # BƯỚC 3: XỬ LÝ DỊCH VỤ PRODUCT
+      # -----------------------------------------------------
+      - name: Build and Push 'Product' Service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./product 
+          push: true
+          tags: |
+            ${{ env.DOCKER_USERNAME }}/e-project-product:latest
+            ${{ env.DOCKER_USERNAME }}/e-project-product:${{ github.sha }}
+
+      # -----------------------------------------------------
+      # BƯỚC 4: XỬ LÝ DỊCH VỤ ORDER
+      # -----------------------------------------------------
+      - name: Build and Push 'Order' Service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./order 
+          push: true
+          tags: |
+            ${{ env.DOCKER_USERNAME }}/e-project-order:latest
+            ${{ env.DOCKER_USERNAME }}/e-project-order:${{ github.sha }}
+
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Build the Docker image
+      run: docker build . --file Dockerfile --tag my-image-name:$(date +%s)
