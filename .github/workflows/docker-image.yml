@@ -66,3 +66,15 @@ jobs:
           tags: |
             ${{ env.DOCKER_USERNAME }}/e-project-order:latest
             ${{ env.DOCKER_USERNAME }}/e-project-order:${{ github.sha }}
+
+          
+      # B5: THÊM DỊCH VỤ API GATEWAY MỚI
+      - name: Build and Push 'API Gateway' Service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./api-gateway # Context trỏ đến thư mục API Gateway
+          push: true
+          tags: |
+            ${{ env.DOCKER_USERNAME }}/e-project-gateway:latest
+            ${{ env.DOCKER_USERNAME }}/e-project-gateway:${{ github.sha }}
+
