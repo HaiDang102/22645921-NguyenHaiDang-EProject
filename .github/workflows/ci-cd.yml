@@ -64,9 +64,9 @@ jobs:
             echo "Error: DOCKERHUB_USERNAME secret is not configured."
             exit 1
           fi
-          # Ensure token or password exists
-          if [ -z "${{ secrets.DOCKERHUB_TOKEN }}" ] && [ -z "${{ secrets.DOCKERHUB_PASSWORD }}" ]; then
-            echo "Error: Neither DOCKERHUB_TOKEN nor DOCKERHUB_PASSWORD secrets are configured."
+          # We rely only on the DOCKERHUB_TOKEN
+          if [ -z "${{ secrets.DOCKERHUB_TOKEN }}" ]; then
+            echo "Error: DOCKERHUB_TOKEN secret is not configured. Please use a Personal Access Token."
             exit 1
           fi
 
@@ -74,7 +74,7 @@ jobs:
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN || secrets.DOCKERHUB_PASSWORD }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }} # Chỉ dùng TOKEN
 
       - name: Build and push ${{ matrix.service }}
         uses: docker/build-push-action@v5
@@ -99,8 +99,8 @@ jobs:
             echo "Error: DOCKERHUB_USERNAME secret is not configured."
             exit 1
           fi
-          if [ -z "${{ secrets.DOCKERHUB_TOKEN }}" ] && [ -z "${{ secrets.DOCKERHUB_PASSWORD }}" ]; then
-            echo "Error: Neither DOCKERHUB_TOKEN nor DOCKERHUB_PASSWORD secrets are configured."
+          if [ -z "${{ secrets.DOCKERHUB_TOKEN }}" ]; then
+            echo "Error: DOCKERHUB_TOKEN secret is not configured. Please use a Personal Access Token."
             exit 1
           fi
 
@@ -108,7 +108,7 @@ jobs:
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN || secrets.DOCKERHUB_PASSWORD }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }} # Chỉ dùng TOKEN
 
       - name: Create production compose file
         run: |
@@ -140,7 +140,7 @@ jobs:
               image: ${{ secrets.DOCKERHUB_USERNAME }}/api-gateway-cicd:latest
               container_name: 'api-gateway-cicd'
               ports:
-                - "8080:3003"
+                - "8080:3003" 
               depends_on:
                 - auth
                 - order
