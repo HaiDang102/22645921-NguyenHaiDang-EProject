@@ -10,13 +10,13 @@ jobs:
   # 🧪 Job 1: Test các services
   test:
     runs-on: ubuntu-latest
-    
+
     services:
       mongodb:
         image: mongo:6
         ports:
           - 27017:27017
-      
+
       rabbitmq:
         image: rabbitmq:3.8-management-alpine
         ports:
@@ -29,7 +29,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
@@ -54,11 +54,11 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
-    
+
     strategy:
       matrix:
         service: [auth, order, product, api-gateway]
-    
+
     steps:
       - uses: actions/checkout@v4
 
@@ -80,6 +80,7 @@ jobs:
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
+          # ưu tiên token, nếu không có dùng password bạn vừa tạo
           password: ${{ secrets.DOCKERHUB_TOKEN || secrets.DOCKERHUB_PASSWORD }}
 
       - name: Build and push ${{ matrix.service }}
@@ -96,7 +97,7 @@ jobs:
     needs: docker-build-push
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    
+
     steps:
       - uses: actions/checkout@v4
 
