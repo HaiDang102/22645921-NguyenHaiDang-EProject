@@ -7,6 +7,7 @@ on:
     branches: [ "main" ]
 
 jobs:
+  # Job 1: Test Services
   test:
     runs-on: ubuntu-latest
     services:
@@ -42,6 +43,7 @@ jobs:
         working-directory: ./${{ matrix.service }}
         run: npm run build --if-present
 
+  # Job 2: Build and Push Docker Images
   docker-build-push:
     needs: test
     runs-on: ubuntu-latest
@@ -83,6 +85,7 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}-cicd:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}-cicd:${{ github.sha }}
 
+  # Job 3: Deploy with Docker Compose
   deploy:
     needs: docker-build-push
     runs-on: ubuntu-latest
@@ -136,8 +139,9 @@ jobs:
             api-gateway:
               image: ${{ secrets.DOCKERHUB_USERNAME }}/api-gateway-cicd:latest
               container_name: 'api-gateway-cicd'
+              # Host:Container mapping below — adjust container port to match your app (3003 or 8080)
               ports:
-                - "8080:8080"
+                - "3003:3003"
               depends_on:
                 - auth
                 - order
@@ -156,4 +160,4 @@ jobs:
           EOF
 
       - name: Deploy containers
-        run: docker compose -f docker-compose.prod.yml up -d
+        run: docker-compose -f docker-compose.prod.yml up -d
