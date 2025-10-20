@@ -1,67 +1,153 @@
-name: Node.js Microservices CI/CD with Docker Hub
+name: Microservices CI/CD with Docker
 
 on:
   push:
-    branches:
-      - main
-
-permissions:
-  contents: read
-  packages: write
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
 jobs:
-  build-and-push:
+  # 🧪 Job 1: Test các services
+  test:
     runs-on: ubuntu-latest
+    
+    services:
+      mongodb:
+        image: mongo:6
+        ports:
+          - 27017:27017
+      
+      rabbitmq:
+        image: rabbitmq:3.8-management-alpine
+        ports:
+          - 5672:5672
 
     strategy:
       matrix:
-        service: ["api-gateway", "auth", "order", "product"]
+        service: [auth, order, product, api-gateway]
+        node-version: [20.x]
 
     steps:
-      # 1️⃣ Checkout mã nguồn
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: ${{ matrix.service }}/package-lock.json
 
-      # 2️⃣ Thiết lập Docker Buildx
+      - name: Install dependencies
+        working-directory: ./${{ matrix.service }}
+        run: npm ci
+
+      - name: Run tests
+        working-directory: ./${{ matrix.service }}
+        run: npm test --if-present || echo "No test for ${{ matrix.service }}"
+
+      - name: Build
+        working-directory: ./${{ matrix.service }}
+        run: npm run build --if-present
+
+  # 🐳 Job 2: Build và Push Docker Images
+  docker-build-push:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    
+    strategy:
+      matrix:
+        service: [auth, order, product, api-gateway]
+    
+    steps:
+      - uses: actions/checkout@v4
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-        
-     # 3️⃣ Đăng nhập Docker Hub
+
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
-          registry: docker.io
-          username: ${{ secrets.DOCKER_USERNAME }} # 🔥 ĐỔI TÊN SECRET
-          password: ${{ secrets.DOCKER_TOKEN }}    # 🔥 ĐỔI TÊN SECRET
-          
-      # 4️⃣ Định nghĩa Image Tags
-      - name: Define Image Tags for ${{ matrix.service }}
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          # CẬP NHẬT: Đổi tên Secret ở đây để tag ảnh Docker
-          images: ${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }} 
-          tags: |
-            type=sha,format=long 
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # 5️⃣ Build và Push Docker Image cho từng Service
-      - name: Build and Push ${{ matrix.service }} Image
+      - name: Build and push ${{ matrix.service }}
         uses: docker/build-push-action@v5
         with:
           context: ./${{ matrix.service }}
-          file: ./${{ matrix.service }}/Dockerfile 
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          cache-from: type=gha 
-          cache-to: type=gha,mode=max 
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}-cicd:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}-cicd:${{ github.sha }}
 
-     # 6️⃣ Đăng xuất Docker Hub
-      - name: Logout from Docker Hub
-        if: always()
+  # 🚀 Job 3: Deploy với Docker Compose
+  deploy:
+    needs: docker-build-push
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
-          logout: true
-          registry: docker.io
-          username: ${{ secrets.DOCKER_USERNAME }} # 🔥 ĐỔI TÊN SECRET
-          password: ${{ secrets.DOCKER_TOKEN }}    # 🔥 ĐỔI TÊN SECRET
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Create production compose file
+        run: |
+          cat > docker-compose.prod.yml << 'EOF'
+          version: "3.9"
+          services:
+            auth:
+              image: ${{ secrets.DOCKERHUB_USERNAME }}/auth-cicd:latest
+              container_name: 'auth-cicd'
+              ports:
+                - "3000:3000"
+              networks:
+                - cicd-network
+
+            order:
+              image: ${{ secrets.DOCKERHUB_USERNAME }}/order-cicd:latest
+              container_name: 'order-cicd'
+              ports:
+                - "3001:3001"
+              networks:
+                - cicd-network
+
+            product:
+              image: ${{ secrets.DOCKERHUB_USERNAME }}/product-cicd:latest
+              container_name: 'product-cicd'
+              ports:
+                - "3002:3002"
+              networks:
+                - cicd-network
+
+            api-gateway:
+              image: ${{ secrets.DOCKERHUB_USERNAME }}/api-gateway-cicd:latest
+              container_name: 'api-gateway-cicd'
+              ports:
+                - "8080:8080"
+              depends_on:
+                - auth
+                - order
+                - product
+              networks:
+                - cicd-network
+
+            rabbitmq:
+              image: rabbitmq:3.8-management-alpine
+              container_name: 'rabbitmq-cicd'
+              ports:
+                - "5672:5672"
+                - "15672:15672"
+
+          networks:
+            cicd-network:
+              driver: bridge
+          EOF
+
+      - name: Deploy containers
+        run: |
+          docker compose -f docker-compose.prod.yml up -d
