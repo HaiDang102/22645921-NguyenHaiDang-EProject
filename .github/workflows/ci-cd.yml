@@ -58,8 +58,6 @@ jobs:
     strategy:
       matrix:
         service: [auth, order, product, api-gateway]
-      # SỬA ĐỔI: Thêm fail-fast: false để tất cả các dịch vụ đều cố gắng build
-      fail-fast: false 
     
     steps:
       - uses: actions/checkout@v4
@@ -67,22 +65,21 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # BƯỚC MỚI: Kiểm tra xem secrets đã được cấu hình chưa
       - name: Validate Docker Hub secrets
         run: |
           if [ -z "${{ secrets.DOCKERHUB_USERNAME }}" ]; then
-            echo "::error::Error: DOCKERHUB_USERNAME secret is not configured in GitHub repository settings."
+            echo "Error: DOCKERHUB_USERNAME secret is not configured."
             exit 1
           fi
-          if [ -z "${{ secrets.DOCKERHUB_TOKEN }}" ]; then
-            echo "::warning::Warning: DOCKERHUB_TOKEN secret is not configured. Falling back to DOCKERHUB_PASSWORD."
+          if [ -z "${{ secrets.DOCKERHUB_TOKEN }}" ] && [ -z "${{ secrets.DOCKERHUB_PASSWORD }}" ]; then
+            echo "Error: Neither DOCKERHUB_TOKEN nor DOCKERHUB_PASSWORD secrets are configured."
+            exit 1
           fi
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
-          # Sử dụng DOCKERHUB_TOKEN, nếu không có thì dùng DOCKERHUB_PASSWORD (cách cũ)
           password: ${{ secrets.DOCKERHUB_TOKEN || secrets.DOCKERHUB_PASSWORD }}
 
       - name: Build and push ${{ matrix.service }}
@@ -96,24 +93,22 @@ jobs:
 
   # 🚀 Job 3: Deploy với Docker Compose
   deploy:
-    # SỬA ĐỔI: Cập nhật điều kiện để chỉ chạy khi job trước thành công (không có fail-fast: false ở đây)
-    needs: [docker-build-push] 
+    needs: docker-build-push
     runs-on: ubuntu-latest
-    # Thêm điều kiện `success()` để đảm bảo deploy chỉ chạy khi tất cả các builds thành công
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.docker-build-push.result == 'success'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     
     steps:
       - uses: actions/checkout@v4
 
-      # BƯỚC MỚI: Kiểm tra lại secrets trước khi deploy
       - name: Validate Docker Hub secrets
         run: |
           if [ -z "${{ secrets.DOCKERHUB_USERNAME }}" ]; then
-            echo "::error::Error: DOCKERHUB_USERNAME secret is not configured in GitHub repository settings."
+            echo "Error: DOCKERHUB_USERNAME secret is not configured."
             exit 1
           fi
-          if [ -z "${{ secrets.DOCKERHUB_TOKEN }}" ]; then
-            echo "::warning::Warning: DOCKERHUB_TOKEN secret is not configured. Falling back to DOCKERHUB_PASSWORD."
+          if [ -z "${{ secrets.DOCKERHUB_TOKEN }}" ] && [ -z "${{ secrets.DOCKERHUB_PASSWORD }}" ]; then
+            echo "Error: Neither DOCKERHUB_TOKEN nor DOCKERHUB_PASSWORD secrets are configured."
+            exit 1
           fi
 
       - name: Login to Docker Hub
@@ -124,7 +119,6 @@ jobs:
 
       - name: Create production compose file
         run: |
-          # Ghi file docker-compose.prod.yml
           cat > docker-compose.prod.yml << 'EOF'
           version: "3.9"
           services:
@@ -133,23 +127,14 @@ jobs:
               container_name: 'auth-cicd'
               ports:
                 - "3000:3000"
-              # Giả định các services sẽ cần kết nối đến MongoDB và RabbitMQ
-              environment:
-                NODE_ENV: production
-                MONGO_URL: mongodb://mongodb:27017/authdb
-                RABBITMQ_URL: amqp://rabbitmq:5672
               networks:
                 - cicd-network
-                
+
             order:
               image: ${{ secrets.DOCKERHUB_USERNAME }}/order-cicd:latest
               container_name: 'order-cicd'
               ports:
                 - "3001:3001"
-              environment:
-                NODE_ENV: production
-                MONGO_URL: mongodb://mongodb:27017/orderdb
-                RABBITMQ_URL: amqp://rabbitmq:5672
               networks:
                 - cicd-network
 
@@ -158,10 +143,6 @@ jobs:
               container_name: 'product-cicd'
               ports:
                 - "3002:3002"
-              environment:
-                NODE_ENV: production
-                MONGO_URL: mongodb://mongodb:27017/productdb
-                RABBITMQ_URL: amqp://rabbitmq:5672
               networks:
                 - cicd-network
 
@@ -170,21 +151,10 @@ jobs:
               container_name: 'api-gateway-cicd'
               ports:
                 - "8080:8080"
-              environment:
-                NODE_ENV: production
               depends_on:
                 - auth
                 - order
                 - product
-              networks:
-                - cicd-network
-
-            # Thêm MongoDB và RabbitMQ vào file deploy để các services có thể kết nối
-            mongodb:
-              image: mongo:6
-              container_name: 'mongodb-cicd'
-              volumes:
-                - mongodb_data:/data/db
               networks:
                 - cicd-network
 
@@ -193,22 +163,12 @@ jobs:
               container_name: 'rabbitmq-cicd'
               ports:
                 - "5672:5672"
-                - "15672:15672" # Cổng quản lý (Management UI)
-              networks:
-                - cicd-network
+                - "15672:15672"
 
           networks:
             cicd-network:
               driver: bridge
-          
-          volumes:
-            mongodb_data:
           EOF
-
-      - name: Install Docker Compose
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y docker-compose
 
       - name: Deploy containers
         run: docker compose -f docker-compose.prod.yml up -d
