@@ -139,9 +139,8 @@ jobs:
             api-gateway:
               image: ${{ secrets.DOCKERHUB_USERNAME }}/api-gateway-cicd:latest
               container_name: 'api-gateway-cicd'
-              # Host:Container mapping below — adjust container port to match your app (3003 or 8080)
               ports:
-                - "3003:3003"
+                - "8080:3003"
               depends_on:
                 - auth
                 - order
