@@ -1,6 +1,5 @@
 # Sử dụng image Node.js 18 làm nền
 FROM node:18-alpine
-
 # Thiết lập thư mục làm việc bên trong container
 WORKDIR /app
 
