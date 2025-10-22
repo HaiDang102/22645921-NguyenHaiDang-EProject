@@ -10,6 +10,7 @@ class ProductController {
     constructor() {
         this.createOrder = this.createOrder.bind(this);
         this.getOrderStatus = this.getOrderStatus.bind(this);
+        this.getProductsDetails = this.getProductsDetails.bind(this);
         this.ordersMap = new Map();
 
     }
@@ -94,17 +95,36 @@ class ProductController {
     }
 
     async getProducts(req, res, next) {
-        try {
-            const token = req.headers.authorization;
-            if (!token) {
-                return res.status(401).json({ message: "Unauthorized" });
-            }
-            const products = await Product.find({});
+            try {
+                const token = req.headers.authorization;
+                if (!token) {
+                    return res.status(401).json({ message: "Unauthorized" });
+                }
+                const products = await Product.find({});
 
-            res.status(200).json(products);
+                res.status(200).json(products);
+            } catch (error) {
+                console.error(error);
+                res.status(500).json({ message: "Server error" });
+            }
+        }
+        //----------------------------------------------------//
+        // Thêm phương thức mới để lấy thông tin sản phẩm theo ID
+        // controller.js
+
+    async getProductsDetails(req, res, next) {
+        try {
+            const { id } = req.params;
+            const token = req.headers.authorization;
+            if (!token) return res.status(401).json({ message: "Unauthorized" });
+
+            const product = await Product.findById(id);
+            if (!product) return res.status(404).json({ message: "product not found" });
+
+            return res.status(200).json(product);
         } catch (error) {
             console.error(error);
-            res.status(500).json({ message: "Server error" });
+            return res.status(500).json({ message: "server error" });
         }
     }
 }
