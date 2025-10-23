@@ -112,21 +112,21 @@ class ProductController {
         // Thêm phương thức mới để lấy thông tin sản phẩm theo ID
         // controller.js
 
-    // async getProductsDetails(req, res, next) {
-    //     try {
-    //         const { id } = req.params;
-    //         const token = req.headers.authorization;
-    //         if (!token) return res.status(401).json({ message: "Unauthorized" });
+    async getProductsDetails(req, res, next) {
+        try {
+            const { id } = req.params;
+            const token = req.headers.authorization;
+            if (!token) return res.status(401).json({ message: "Unauthorized" });
 
-    //         const product = await Product.findById(id);
-    //         if (!product) return res.status(404).json({ message: "product not found" });
+            const product = await Product.findById(id);
+            if (!product) return res.status(404).json({ message: "product not found" });
 
-    //         return res.status(200).json(product);
-    //     } catch (error) {
-    //         console.error(error);
-    //         return res.status(500).json({ message: "server error" });
-    //     }
-    // }
+            return res.status(200).json(product);
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({ message: "server error" });
+        }
+    }
 }
 
 module.exports = ProductController;
