@@ -11,7 +11,7 @@ router.get("/", isAuthenticated, productController.getProducts);
 
 // Thêm endpoint GET /:id để lấy thông tin sản phẩm theo ID
 //router.get("/:id", isAuthenticated, productController.getProductsDetails);
-router.get("/:id", isAuthenticated, productController.getProductById);
+// router.get("/:id", isAuthenticated, productController.getProductById);
 
 
 module.exports = router;
