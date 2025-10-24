@@ -51,3 +51,6 @@ docker-compose up --build
 
 ![alt text](public/IMG17.jpg)
 ![alt text](public/IMG18.jpg)
+
+--- run CI/CD 
+![alt text](public/IMG21.jpg)
