@@ -9,7 +9,7 @@ router.post("/", isAuthenticated, productController.createProduct);
 router.post("/buy", isAuthenticated, productController.createOrder);
 router.get("/", isAuthenticated, productController.getProducts);
 
-// Thêm endpoint GET /:id để lấy thông tin sản phẩm theo ID
 router.get("/:id", isAuthenticated, productController.getProductById);
+
 
 module.exports = router;

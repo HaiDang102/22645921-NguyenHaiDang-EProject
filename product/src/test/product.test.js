@@ -3,9 +3,13 @@ const chaiHttp = require("chai-http");
 const App = require("../app");
 const expect = chai.expect;
 require("dotenv").config();
+
 chai.use(chaiHttp);
+
+
 describe("Products", () => {
     let app;
+
     before(async() => {
         app = new App();
         await Promise.all([app.connectDB(), app.setupMessageBroker()])
